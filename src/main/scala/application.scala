@@ -108,8 +108,8 @@ trait Application
 {
   /** Public methods.
    */
-  def getRawArgs()  = opts.rawArgs
-  def getArgs()     = opts.args
+  def getRawArgs()  = _opts.rawArgs
+  def getArgs()     = _opts.args
   
   /** These methods can be overridden to modify application behavior.
    */
@@ -212,20 +212,18 @@ trait Application
   }
 
   private var _opts: Options = null
-  lazy val opts = _opts
-  
+
   private val argInfos = new HashSet[ArgInfo]()
 
   def callWithOptions(): Unit = {
-    import opts._
     def missing(s: String)  = usageError("Missing required option '%s'".format(s))
 
     // verify minimum quantity of positional arguments
-    if (args.size < posArgCount)
-      usageError("too few arguments: expected %d, got %d".format(posArgCount, args.size))
+    if (_opts.args.size < posArgCount)
+      usageError("too few arguments: expected %d, got %d".format(posArgCount, _opts.args.size))
     
     // verify all required options are present
-    val missingArgs = reqArgs filter (x => !(options contains x.name) && !(x.name matches """^arg\d+$"""))
+    val missingArgs = reqArgs filter (x => !(_opts.options contains x.name) && !(x.name matches """^arg\d+$"""))
     if (!missingArgs.isEmpty) {
       val missingStr = missingArgs map ("--" + _.name) mkString " "        
       val s = if (missingArgs.size == 1) "" else "s"
@@ -235,15 +233,15 @@ trait Application
     
     def determineValue(ma: MainArg): AnyRef = {
       val MainArg(name, _, tpe) = ma
-      def isPresent = options contains name
+      def isPresent = _opts.options contains name
       
-      if (ma.isPositional)      coerceTo(name, tpe)(args(ma.pos - 1))
-      else if (isPresent)       coerceTo(name, tpe)(options(name))
+      if (ma.isPositional)      coerceTo(name, tpe)(_opts.args(ma.pos - 1))
+      else if (isPresent)       coerceTo(name, tpe)(_opts.options(name))
       else if (ma.isBoolean)    jl.Boolean.FALSE
       else if (ma.isOptional)   None
       else                      missing(name)
     }
-    
+
     mainMethod.invoke(this, (mainArgs map determineValue).toArray : _*)
   }
   
@@ -254,9 +252,10 @@ trait Application
       callWithOptions()
     }
     catch {
-      case UsageError(msg) =>
-        println("Error: " + msg)
+      case ex:UsageError =>
+        println("Error: " + ex.getMessage)
         println(usageMessage)
+        throw ex
     }
   }
 }
