@@ -192,7 +192,8 @@ trait Application
     def fail      = designError("Could not create type '%s' from String".format(tpe))
     def mismatch  = usageError("option --%s expects arg of type '%s' but was given '%s'".format(name, stringForType(tpe), value))
     def surprise  = usageError("Unexpected type: %s (%s)".format(tpe, tpe.getClass))
-    
+
+    println("trying to coerce " + name + " to " + tpe)
     tpe match {
       case CString          => value
       case CArrayString     => value split separator
@@ -216,6 +217,8 @@ trait Application
   private val argInfos = new HashSet[ArgInfo]()
 
   def callWithOptions(): Unit = {
+    println(parameterTypes)
+
     def missing(s: String)  = usageError("Missing required option '%s'".format(s))
 
     // verify minimum quantity of positional arguments
@@ -249,6 +252,7 @@ trait Application
   def main(cmdline: Array[String]) {
     try {
       _opts = Options.parse(argInfos, cmdline: _*)
+      println("_opts = " + _opts)
       callWithOptions()
     }
     catch {
