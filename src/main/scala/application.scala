@@ -263,3 +263,5 @@ trait Application
     }
   }
 }
+
+case class OneArg(val longName: String, val shortName: Char, val isSwitch: Boolean)
